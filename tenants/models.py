@@ -2,6 +2,7 @@ from django.db import models
 # Create your models here.
 class TenantModel(models.Model) :
 
+    tenant_name = models.CharField(max_length=100, null=True)
     phone_no = models.CharField(max_length=10, null=True)
     email = models.EmailField(null=True)
 
