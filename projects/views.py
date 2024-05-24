@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import ProjectModel
 # Create your views here.
+from .serializers import ProjectSerializer
 
 class ProjectAPIView (APIView) :
 
@@ -14,7 +15,8 @@ class ProjectAPIView (APIView) :
         for project in all_projects:
             project_obj = {
                 "id" : project.id,
-                "project_name" : project.project_name
+                "project_name" : project.project_name,
+                "tenand_id" : project.tenand_id
             }
             all_project_list.append(project_obj)
         
@@ -22,15 +24,13 @@ class ProjectAPIView (APIView) :
     
     def post(self, request) :
 
-        new_project = ProjectModel(project_name = request.data['project_name'])
-        new_project.save()
-        project_obj = {
-                "id" : new_project.id,
-                "project_name" : new_project.project_name
-            }
-        
-        return Response(project_obj)
+        new_project = ProjectSerializer(data = request.data)
 
+        if new_project.is_valid() :
+            new_project.save()
+            return Response(new_project.data)
+        else :
+            return Response(new_project.errors)
     
 class ProjectAPIViewById (APIView) :
     def get (self, request, id) :
@@ -38,7 +38,8 @@ class ProjectAPIViewById (APIView) :
 
         project_obj = {
             "id" : project.id,
-            "project_name" : project.project_name
+            "project_name" : project.project_name,
+            "tenand_id" : project.tenand_id
         }
 
         return Response(project_obj)
@@ -46,12 +47,13 @@ class ProjectAPIViewById (APIView) :
     def put(self, request, id) :
 
         project = ProjectModel.objects.filter(id = id)
-        project.update(project_name = request.data['project_name'])
+        project.update(project_name = request.data['project_name'], tenand_id = request.data['tenand_id'])
 
         project = ProjectModel.objects.get(id = id)
         project_obj = {
             "id" : project.id,
-            "project_name" : project.project_name
+            "project_name" : project.project_name,
+            "tenand_id" : project.tenand_id
         }
 
         return Response(project_obj)
