@@ -5,7 +5,7 @@ class UserModel (models.Model) :
 
     username = models.CharField(max_length=100, null=True)
     phone_no = models.CharField(max_length=10, null=True)
-    email = models.EmailField(null=True)
+    email = models.EmailField(null=True, unique=True)
     tenant = models.ForeignKey(TenantModel, on_delete=models.CASCADE)
 
     def __str__(self) :
