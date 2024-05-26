@@ -10,17 +10,9 @@ class ProjectAPIView (APIView) :
     def get(self, request) :
 
         all_projects = ProjectModel.objects.all()
-        all_project_list = []
-
-        for project in all_projects:
-            project_obj = {
-                "id" : project.id,
-                "project_name" : project.project_name,
-                "tenand_id" : project.tenand_id
-            }
-            all_project_list.append(project_obj)
+        all_projects_ser = ProjectSerializer(all_projects, many=True)
         
-        return Response(all_project_list)
+        return Response(all_projects_ser.data)
     
     def post(self, request) :
 
@@ -28,35 +20,30 @@ class ProjectAPIView (APIView) :
 
         if new_project.is_valid() :
             new_project.save()
+
             return Response(new_project.data)
         else :
             return Response(new_project.errors)
     
 class ProjectAPIViewById (APIView) :
+
     def get (self, request, id) :
         project = ProjectModel.objects.get(id = id)
-
-        project_obj = {
-            "id" : project.id,
-            "project_name" : project.project_name,
-            "tenand_id" : project.tenand_id
-        }
-
-        return Response(project_obj)
+        project_ser = ProjectSerializer(project)
+        return Response(project_ser.data)
     
     def put(self, request, id) :
 
-        project = ProjectModel.objects.filter(id = id)
-        project.update(project_name = request.data['project_name'], tenand_id = request.data['tenand_id'])
-
+        data = request.data
         project = ProjectModel.objects.get(id = id)
-        project_obj = {
-            "id" : project.id,
-            "project_name" : project.project_name,
-            "tenand_id" : project.tenand_id
-        }
+        project_ser = ProjectSerializer(project, data=data, partial=True)
 
-        return Response(project_obj)
+        if project_ser.is_valid() :
+            project_ser.save()
+
+            return Response(project_ser.data)
+        else :
+            return Response(project_ser.errors)
     
     def delete(self, request, id) :
 

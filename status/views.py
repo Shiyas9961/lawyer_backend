@@ -1,61 +1,50 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import StatusModel
+from .serializers import StatusSerializer
 
 class StatusAPIView (APIView) :
 
     def get(self, request) :
 
         all_status = StatusModel.objects.all()
-        all_status_list = []
-
-        for status in all_status:
-            status_obj = {
-                "id" : status.id,
-                "status_name" : status.status_name,
-            }
-
-            all_status_list.append(status_obj)
+        all_status_ser = StatusSerializer(all_status, many=True)
         
-        return Response(all_status_list)
+        return Response(all_status_ser.data)
     
     def post(self, request) :
 
-        new_status = StatusModel(status_name = request.data['status_name'])
-        new_status.save()
+        data = request.data
+        new_status = StatusSerializer(data=data)
 
-        new_status_obj = {
-            "id" : new_status.id,
-            "status_name" : new_status.status_name
-        }
+        if new_status.is_valid():
+            new_status.save()
 
-        return Response(new_status_obj)
+            return Response(new_status.data)
+        else :
+            return Response(new_status.errors)
 
 class StatusAPIViewById (APIView) :
 
     def get(self, request, id) :
 
         status_obj = StatusModel.objects.get(id = id)
+        status_obj_ser = StatusSerializer(status_obj)
 
-        status_obj = {
-            "id" : status_obj.id,
-            "status_name" : status_obj.status_name
-        }
-
-        return Response(status_obj)
+        return Response(status_obj_ser.data)
     
     def put(self, request, id):
 
-        status_obj = StatusModel.objects.filter(id = id)
-        status_obj.update(status_name = request.data['status_name'])
-        updated_status = StatusModel.objects.get(id = id)
+        data = request.data
+        status_obj = StatusModel.objects.get(id = id)
+        status_obj_ser = StatusSerializer(status_obj, data=data, partial=True)
 
-        status_obj = {
-            "id" : updated_status.id,
-            "status_name" : updated_status.status_name
-        }
+        if status_obj_ser.is_valid() :
+            status_obj_ser.save()
 
-        return Response(status_obj)
+            return Response(status_obj_ser.data)
+        else :
+            return Response(status_obj_ser.errors)
     
     def delete (self, request, id) :
 

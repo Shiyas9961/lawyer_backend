@@ -2,67 +2,48 @@ from django.shortcuts import render
 from .models import TenantModel
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from .serializers import TenantSerializer
 
 class TenantAPIView (APIView) :
 
     def get(self, request) :
 
         all_tenants = TenantModel.objects.all()
-        all_tenants_list = []
+        all_tenants_ser = TenantSerializer(all_tenants, many=True)
 
-        for tenant in all_tenants:
-
-            tenant_obj = {
-                "id" : tenant.id,
-                "tenant_name" : tenant.tenant_name,
-                "phone_no" : tenant.phone_no,
-                "email" : tenant.email,
-            }
-
-            all_tenants_list.append(tenant_obj)
-
-        return Response(all_tenants_list)
+        return Response(all_tenants_ser.data)
     
     def post(self, request) :
 
-        new_tenant = TenantModel(tenant_name = request.data['tenant_name'],phone_no = request.data['phone_no'], email = request.data['email'])
-        new_tenant.save()
-        tenant_obj = {
-                "id" : new_tenant.id,
-                "tenant_name" : new_tenant.tenant_name,
-                "email" : new_tenant.email,
-                "phone_no" : new_tenant.phone_no
-            }
-        
-        return Response(tenant_obj)
+        data = request.data
+        new_tenant = TenantSerializer(data=data)
+
+        if new_tenant.is_valid() :
+            new_tenant.save()
+
+            return Response(new_tenant.data)
+        else :
+            return Response(new_tenant.errors)
     
 class TenantAPIViewById (APIView) :
     def get (self, request, id) :
         tenant = TenantModel.objects.get(id = id)
+        tenant_ser = TenantSerializer(tenant)
 
-        tenant_obj = {
-            "id" : tenant.id,
-            "tenant_name" : tenant.tenant_name,
-            "email" : tenant.email,
-            "phone_no" : tenant.phone_no
-        }
-
-        return Response(tenant_obj)
+        return Response(tenant_ser.data)
     
     def put(self, request, id) :
 
-        tenant = TenantModel.objects.filter(id = id)
-        tenant.update(tenant_name = request.data['tenant_name'],email = request.data['email'], phone_no = request.data['phone_no'])
-
+        data = request.data
         tenant = TenantModel.objects.get(id = id)
-        tenant_obj = {
-            "id" : tenant.id,
-            "tenant_name" : tenant.tenant_name,
-            "email" : tenant.email,
-            "phone_no" : tenant.phone_no
-        }
+        tenant_ser = TenantSerializer(tenant, data=data, partial=True)
 
-        return Response(tenant_obj)
+        if tenant_ser.is_valid() :
+            tenant_ser.save()
+
+            return Response(tenant_ser.data)
+        else :
+            return Response(tenant_ser.errors)
     
     def delete(self, request, id) :
 

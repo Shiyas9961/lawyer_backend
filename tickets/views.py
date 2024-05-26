@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import TicketModel
-from .serializers import TicketSerializer
+from .models import TicketModel, CommentModel
+from .serializers import TicketSerializer, CommentSerializer
 from users.models import UserModel
 # Create your views here.
 
@@ -56,4 +56,56 @@ class TicketAPIViewById (APIView) :
 
         return Response({
             "message" : f"Ticket {name} deleted"
+        }) 
+class CommentAPIView (APIView) :
+
+    def get(self, request) :
+
+        comments = CommentModel.objects.all()
+        comments_ser = CommentSerializer(comments, many=True)
+
+        return Response(comments_ser.data)
+    
+    def post(self, request) :
+
+        data = request.data
+        new_comment = CommentSerializer(data=data)
+
+        if new_comment.is_valid() :
+            new_comment.save()
+
+            return Response(new_comment.data)
+        else :
+            return Response(new_comment.errors)
+        
+class CommentAPIViewById (APIView) :
+
+    def get(self, request, id) :
+
+        comment = CommentModel.objects.get(id = id)
+        comment_ser = CommentSerializer(comment)
+
+        return Response(comment_ser.data)
+    
+    def put(self, request, id) :
+
+        data = request.data
+        comment = CommentModel.objects.get(id = id)
+        comment_ser = CommentSerializer(comment, data=data, partial = True)
+
+        if comment_ser.is_valid() :
+            comment_ser.save()
+
+            return Response(comment_ser.data)
+        else :
+            return Response(comment_ser.errors)
+        
+    def delete(self, request, id) :
+
+        comment = CommentModel.objects.get(id = id)
+        ticket = comment.ticket.title
+        comment.delete()
+
+        return Response({
+            "message" : f"Comment for {ticket} deleted"
         })

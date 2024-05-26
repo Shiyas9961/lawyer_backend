@@ -3,6 +3,7 @@ from status.models import StatusModel
 from projects.models import ProjectModel
 from tenants.models import TenantModel
 from users.models import UserModel
+from users.models import UserModel
 
 # Create your models here.
 class TicketModel(models.Model) :
@@ -13,3 +14,12 @@ class TicketModel(models.Model) :
     project = models.ForeignKey(ProjectModel, on_delete=models.SET_NULL, related_name='project_table', null=True)
     tenant = models.ForeignKey(TenantModel, on_delete=models.CASCADE, related_name='tenant_table')
     user = models.ForeignKey(UserModel, on_delete=models.CASCADE, related_name='user_table')
+
+    def __str__(self) :
+        return self.title
+    
+class CommentModel (models.Model) :
+
+    comment = models.TextField()
+    ticket = models.ForeignKey(TicketModel, on_delete=models.SET_NULL, null=True, related_name='ticket_comment')
+    user = models.ForeignKey(UserModel, on_delete=models.CASCADE, related_name='user_comment')
