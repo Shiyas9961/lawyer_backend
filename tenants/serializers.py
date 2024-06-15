@@ -5,4 +5,4 @@ class TenantSerializer (serializers.ModelSerializer) :
 
     class Meta :
         model = TenantModel
-        fields = "__all__"
+        fields = '__all__'

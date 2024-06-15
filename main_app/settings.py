@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -45,6 +48,11 @@ INSTALLED_APPS = [
     'users'
 ]
 
+COGNITO_USER_POOL_ID = os.getenv('COGNITO_USER_POOL_ID')
+COGNITO_APP_CLIENT_ID = os.getenv('COGNITO_APP_CLIENT_ID')
+COGNITO_REGION = os.getenv('COGNITO_REGION')
+COGNITO_APP_CLIENT_SECRET = os.getenv('COGNITO_APP_CLIENT_SECRET')
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -53,7 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'main_app.middleware.JsonErrorMiddleware',
+    # 'main_app.middleware.JsonErrorMiddleware',
 ]
 
 ROOT_URLCONF = 'main_app.urls'
@@ -134,6 +142,9 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES' : (
+        'main_app.authentication.CognitoAuthentication',
+    ),
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),

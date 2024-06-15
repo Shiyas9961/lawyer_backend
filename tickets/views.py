@@ -4,9 +4,15 @@ from rest_framework.response import Response
 from .models import TicketModel, CommentModel
 from .serializers import TicketSerializer, CommentSerializer
 from users.models import UserModel
+from rest_framework.permissions import IsAuthenticated
+from main_app.authentication import CognitoAuthentication
+from main_app.permissions import IsAdminUser, IsUserUser
 # Create your views here.
 
 class TicketAPIView (APIView) :
+
+    permission_classes = [ IsAuthenticated, IsUserUser]
+    authentication_classes = [ CognitoAuthentication ]
 
     def get (self, request) :
 
@@ -29,6 +35,8 @@ class TicketAPIView (APIView) :
 
 class TicketAPIViewById (APIView) :
 
+    permission_classes = [IsAuthenticated, ]
+    authentication_classes = [ CognitoAuthentication ]
     def get (self, request, id) :
 
         ticket = TicketModel.objects.get(id = id)
@@ -57,6 +65,7 @@ class TicketAPIViewById (APIView) :
         return Response({
             "message" : f"Ticket {name} deleted"
         }) 
+    
 class CommentAPIView (APIView) :
 
     def get(self, request) :

@@ -3,14 +3,20 @@ from .models import TenantModel
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import TenantSerializer
+from rest_framework.permissions import IsAuthenticated
+from main_app.permissions import IsUserSuperAdmin
+from main_app.authentication import CognitoAuthentication
 
 class TenantAPIView (APIView) :
-
+    
+    permission_classes = [IsAuthenticated, IsUserSuperAdmin]
+    authentication_classes = [CognitoAuthentication]
+    
     def get(self, request) :
 
         all_tenants = TenantModel.objects.all()
         all_tenants_ser = TenantSerializer(all_tenants, many=True)
-
+        
         return Response(all_tenants_ser.data)
     
     def post(self, request) :
