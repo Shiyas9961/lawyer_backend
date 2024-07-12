@@ -1,23 +1,15 @@
-import hmac
-import hashlib
-import base64
 import boto3
 from .models import UserModel
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import UserModelsSerializer, UserRegisterSerializer
+from .serializers import UserModelsSerializer, UserRegisterSerializer, UserLoginSerializer
 from main_app.authentication import CognitoAuthentication
-from main_app.permissions import IsAdminUser
-from rest_framework.permissions import IsAuthenticated
+from main_app.permissions import IsAdminUser, IsUserUser
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.conf  import settings
 from rest_framework import status
 # Create your views here.
 
-def get_secret_hash(username, client_id, client_secret) :
-
-    message = username + client_id
-    dig = hmac.new(client_secret.encode('utf-8'), message.encode('utf-8'), hashlib.sha256).digest()
-    return base64.b64encode(dig).decode()
 
 class UserAPIView(APIView) :
 
@@ -48,15 +40,12 @@ class UserAPIView(APIView) :
             tenand_id = serializer.validated_data['tenand_id']
 
             client_id = settings.COGNITO_APP_CLIENT_ID
-            client_secret = settings.COGNITO_APP_CLIENT_SECRET
-            secret_hash = get_secret_hash(email, client_id, client_secret)
 
             client = boto3.client('cognito-idp', region_name = settings.COGNITO_REGION)
 
             try:
                 response = client.sign_up(
                     ClientId = client_id,
-                    SecretHash = secret_hash,
                     Username = email,
                     Password = password,
                     UserAttributes = [
@@ -100,27 +89,77 @@ class UserAPIView(APIView) :
         else :
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
+        
 class UserAPIViewById (APIView) :
 
+    permission_classes = [IsAuthenticated, IsUserUser]
+    authentication_classes = [ CognitoAuthentication ]
     
     def get(self, request, id) :
 
-        user = UserModel.objects.get(id = id)
+        user = UserModel.objects.get(pk = id)
         user_serializer = UserModelsSerializer(user).data
 
-        return Response(user_serializer)
+        return Response(user_serializer, status=status.HTTP_200_OK)
     
     def put(self, request, id) :
 
-        user = UserModel.objects.get(id = id)
-        user_serializer = UserModelsSerializer(user, data=request.data, partial=True)
+        user_id = request.user.sub
+        role = request.user.role
 
-        if user_serializer.is_valid() :
-            user_serializer.save()
+        if (user_id == id) or (role in ["admin", "superadmin"]) :
+            curr_user = UserModel.objects.get(pk = user_id)
+            name = request.data.get('name')
+            phone_number = request.data.get('phone_number')
+            new_role = None
+            if role in ["admin", "superadmin"] :
+                new_role = request.data.get("role", new_role)
 
-            return Response(user_serializer.data)
+            if not name and not phone_number :
+                return Response({
+                    "message" : "Name or Phone number required"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            client = boto3.client('cognito-idp', region_name = settings.COGNITO_REGION)
+            
+            user_attributes = []
+
+            if name :
+                user_attributes.append({
+                    'Name' : 'name', 'Value' : name
+                })
+            if phone_number :
+                user_attributes.append({
+                    'Name' : 'phone_number', 'Value' : phone_number
+                })
+            if new_role :
+                user_attributes.append({
+                    'Name' : 'custom:role', 'Value' : new_role
+                })
+            try:
+
+                response = client.update_user_attributes(
+                    AccessToken = request.data.accessToken,
+                    UserAttributes = user_attributes
+                )
+
+                if response and (response['ResponseMetadata']['HTTPStatusCode'] == 200) :
+                    curr_user_ser = UserModelsSerializer(curr_user, data=request.data, partial=True)
+                    if curr_user_ser.is_valid() :
+                        curr_user_ser.save()
+                        return Response({
+                            "message" : "User details updated"
+                            }, status=status.HTTP_200_OK)
+                    else :
+                        return Response(curr_user_ser.errors, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e :
+                return Response({
+                    "message" : str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)    
         else :
-            return Response(user_serializer.errors)
+            return Response({
+                "message" : "You have no permission to edit the details of this user"
+            }, status=status.HTTP_401_UNAUTHORIZED)
         
     def delete (self, request, id) :
 
@@ -131,3 +170,36 @@ class UserAPIViewById (APIView) :
         return Response({
             "message" : f"User {name} deleted successfully"
         })
+    
+class UserLoginAPIView(APIView) :
+
+    permission_classes = [ AllowAny ]
+
+    def post(self, request) :
+
+        data = request.data
+        serializer = UserLoginSerializer(data=data)
+
+        if serializer.is_valid() :
+            username = serializer.validated_data['username']
+            password = serializer.validated_data['password']
+
+            client = boto3.client('cognito-idp', region_name = settings.COGNITO_REGION)
+            try :
+                response = client.initiate_auth(
+                        AuthFlow = 'USER_PASSWORD_AUTH',
+                        AuthParameters = {
+                            'USERNAME' : username,
+                            'PASSWORD' : password
+                        },
+                        ClientId = settings.COGNITO_APP_CLIENT_ID
+                    )
+                return Response(response['AuthenticationResult'], status=status.HTTP_202_ACCEPTED)
+            except client.exceptions.NoAuthorizedException :
+                return Response({
+                    "message" : "Invalid username or password"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e :
+                return Response({
+                    "message" : str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)

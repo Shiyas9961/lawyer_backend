@@ -51,7 +51,6 @@ INSTALLED_APPS = [
 COGNITO_USER_POOL_ID = os.getenv('COGNITO_USER_POOL_ID')
 COGNITO_APP_CLIENT_ID = os.getenv('COGNITO_APP_CLIENT_ID')
 COGNITO_REGION = os.getenv('COGNITO_REGION')
-COGNITO_APP_CLIENT_SECRET = os.getenv('COGNITO_APP_CLIENT_SECRET')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -61,7 +60,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'main_app.middleware.JsonErrorMiddleware',
+    'main_app.middleware.JsonErrorMiddleware',
 ]
 
 ROOT_URLCONF = 'main_app.urls'
@@ -93,7 +92,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'lawyer',
         'USER' : 'root',
-        'PASSWORD' : '123',
+        'PASSWORD' : 'Shiyas@123',
         'HOST' : 'localhost',
         'PORT' : '3306'
     }

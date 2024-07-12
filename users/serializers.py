@@ -16,3 +16,7 @@ class UserRegisterSerializer(serializers.Serializer) :
     role = serializers.CharField(max_length = 50)
     tenand_id = serializers.CharField(required = True)
 
+class UserLoginSerializer(serializers.Serializer) :
+
+    username = serializers.EmailField(required = True)
+    password = serializers.CharField(required = True)

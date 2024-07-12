@@ -4,6 +4,8 @@ from rest_framework import exceptions
 from django.conf import settings
 import requests
 
+COGNITO_ISSUER = f"https://cognito-idp.{settings.COGNITO_REGION}.amazonaws.com/{settings.COGNITO_USER_POOL_ID}"
+
 class CognitoUser:
 
     def __init__(self, claims) :
@@ -59,7 +61,7 @@ class CognitoAuthentication(authentication.BaseAuthentication) :
         public_key = jwk.construct(key)
 
         try:
-            claims = jwt.decode(token, public_key, algorithms=['RS256'], audience=app_client_id)
+            claims = jwt.decode(token, public_key, algorithms=['RS256'], audience=app_client_id, issuer=COGNITO_ISSUER)
             return claims
         except jwt.ExpiredSignatureError :
             raise exceptions.AuthenticationFailed('Token is expired')
