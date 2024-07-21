@@ -5,7 +5,7 @@ class UserModel (models.Model) :
 
     user_id = models.CharField(primary_key=True, max_length=50)
     username = models.CharField(max_length=100, null=True)
-    phone_no = models.CharField(max_length=10, null=True)
+    phone_no = models.CharField(max_length=15, null=True)
     email = models.EmailField(null=True, unique=True)
     role = models.CharField(default="user", max_length=10)
     tenant = models.ForeignKey(TenantModel, on_delete=models.CASCADE)

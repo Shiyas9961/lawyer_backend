@@ -6,6 +6,7 @@ from .serializers import TenantSerializer
 from rest_framework.permissions import IsAuthenticated
 from main_app.permissions import IsUserSuperAdmin
 from main_app.authentication import CognitoAuthentication
+from rest_framework import status
 
 class TenantAPIView (APIView) :
     
@@ -27,11 +28,14 @@ class TenantAPIView (APIView) :
         if new_tenant.is_valid() :
             new_tenant.save()
 
-            return Response(new_tenant.data)
+            return Response({
+                "message" : "New tenant created"
+            }, status=status.HTTP_201_CREATED)
         else :
-            return Response(new_tenant.errors)
+            return Response(new_tenant.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class TenantAPIViewById (APIView) :
+
     def get (self, request, id) :
         tenant = TenantModel.objects.get(id = id)
         tenant_ser = TenantSerializer(tenant)
@@ -47,9 +51,11 @@ class TenantAPIViewById (APIView) :
         if tenant_ser.is_valid() :
             tenant_ser.save()
 
-            return Response(tenant_ser.data)
+            return Response({
+                "message" : "Tenant updated successfully"
+            }, status=status.HTTP_202_ACCEPTED)
         else :
-            return Response(tenant_ser.errors)
+            return Response(tenant_ser.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def delete(self, request, id) :
 

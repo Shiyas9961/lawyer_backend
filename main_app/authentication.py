@@ -14,8 +14,9 @@ class CognitoUser:
         self.is_authenticated = True
         self.name = claims.get('name')
         self.role = claims.get('custom:role')
-        self.tenand_id = claims.get('custom:tenand_id')
+        self.tenant = claims.get('custom:tenand_id')
         self.email = claims.get('email')
+        self.user_id = claims.get('sub')
 
 class CognitoAuthentication(authentication.BaseAuthentication) :
 

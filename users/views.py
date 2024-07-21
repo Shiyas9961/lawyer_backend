@@ -27,7 +27,7 @@ class UserAPIView(APIView) :
 
         data = request.data
         data['role'] = data.get('role', 'user')
-        data['tenand_id'] = request.user.tenand_id
+        data['tenand_id'] = request.user.tenant
         serializer = UserRegisterSerializer(data=data)
         
         if serializer.is_valid() :
@@ -88,8 +88,8 @@ class UserAPIView(APIView) :
                 return Response({"error" : str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else :
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        
+
+   
 class UserAPIViewById (APIView) :
 
     permission_classes = [IsAuthenticated, IsUserUser]
@@ -104,18 +104,21 @@ class UserAPIViewById (APIView) :
     
     def put(self, request, id) :
 
-        user_id = request.user.sub
+        user_id = request.user.user_id
         role = request.user.role
 
         if (user_id == id) or (role in ["admin", "superadmin"]) :
-            curr_user = UserModel.objects.get(pk = user_id)
-            name = request.data.get('name')
-            phone_number = request.data.get('phone_number')
+            
+            curr_user = UserModel.objects.get(pk = id)
+
+            name = request.data.get('username')
+            phone_no = request.data.get('phone_no')
             new_role = None
+
             if role in ["admin", "superadmin"] :
                 new_role = request.data.get("role", new_role)
 
-            if not name and not phone_number :
+            if not name and not phone_no :
                 return Response({
                     "message" : "Name or Phone number required"
                 }, status=status.HTTP_400_BAD_REQUEST)
@@ -128,9 +131,9 @@ class UserAPIViewById (APIView) :
                 user_attributes.append({
                     'Name' : 'name', 'Value' : name
                 })
-            if phone_number :
+            if phone_no :
                 user_attributes.append({
-                    'Name' : 'phone_number', 'Value' : phone_number
+                    'Name' : 'phone_number', 'Value' : phone_no
                 })
             if new_role :
                 user_attributes.append({
@@ -138,8 +141,9 @@ class UserAPIViewById (APIView) :
                 })
             try:
 
-                response = client.update_user_attributes(
-                    AccessToken = request.data.accessToken,
+                response = client.admin_update_user_attributes(
+                    UserPoolId = settings.COGNITO_USER_POOL_ID,
+                    Username = curr_user.email,
                     UserAttributes = user_attributes
                 )
 
@@ -152,6 +156,8 @@ class UserAPIViewById (APIView) :
                             }, status=status.HTTP_200_OK)
                     else :
                         return Response(curr_user_ser.errors, status=status.HTTP_400_BAD_REQUEST)
+            except client.exceptions.UserNotFoundException:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
             except Exception as e :
                 return Response({
                     "message" : str(e)
@@ -163,43 +169,76 @@ class UserAPIViewById (APIView) :
         
     def delete (self, request, id) :
 
-        user = UserModel.objects.get(id = id)
-        name = user.username
-        user.delete()
-
-        return Response({
-            "message" : f"User {name} deleted successfully"
-        })
-    
-class UserLoginAPIView(APIView) :
-
-    permission_classes = [ AllowAny ]
-
-    def post(self, request) :
-
-        data = request.data
-        serializer = UserLoginSerializer(data=data)
-
-        if serializer.is_valid() :
-            username = serializer.validated_data['username']
-            password = serializer.validated_data['password']
-
+        if request.user.role in ["admin", "superadmin"] :
+            
+            user = UserModel.objects.get(pk = id)
             client = boto3.client('cognito-idp', region_name = settings.COGNITO_REGION)
-            try :
-                response = client.initiate_auth(
-                        AuthFlow = 'USER_PASSWORD_AUTH',
-                        AuthParameters = {
-                            'USERNAME' : username,
-                            'PASSWORD' : password
-                        },
-                        ClientId = settings.COGNITO_APP_CLIENT_ID
-                    )
-                return Response(response['AuthenticationResult'], status=status.HTTP_202_ACCEPTED)
-            except client.exceptions.NoAuthorizedException :
-                return Response({
-                    "message" : "Invalid username or password"
-                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                response = client.admin_delete_user(
+                    UserPoolId = settings.COGNITO_USER_POOL_ID,
+                    Username = user.email
+                )
+
+                if response and (response['ResponseMetadata']['HTTPStatusCode'] == 200) :
+                    user.delete()
+                    return Response({
+                        "message" : f"User deleted successfully"
+                    })
+            except client.exceptions.UserNotFoundException:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
             except Exception as e :
                 return Response({
                     "message" : str(e)
                 }, status=status.HTTP_400_BAD_REQUEST)
+        else :
+            return Response({
+                "message" : "You have no permission to delete the user"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+class ListUsersByTenant(APIView) :
+
+    permission_classes = [ IsAuthenticated, IsAdminUser ]
+    authentication_classes = [ CognitoAuthentication ]
+
+    def get(self, request) :
+        tenant = request.user.tenant
+        users_by_tenant = UserModel.objects.filter(tenant=tenant)
+        serializer = UserModelsSerializer(users_by_tenant, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+    
+    
+# class UserLoginAPIView(APIView) :
+
+#     permission_classes = [ AllowAny ]
+
+#     def post(self, request) :
+
+#         data = request.data
+#         serializer = UserLoginSerializer(data=data)
+
+#         if serializer.is_valid() :
+#             username = serializer.validated_data['username']
+#             password = serializer.validated_data['password']
+
+#             client = boto3.client('cognito-idp', region_name = settings.COGNITO_REGION)
+#             try :
+#                 response = client.initiate_auth(
+#                         AuthFlow = 'USER_PASSWORD_AUTH',
+#                         AuthParameters = {
+#                             'USERNAME' : username,
+#                             'PASSWORD' : password
+#                         },
+#                         ClientId = settings.COGNITO_APP_CLIENT_ID
+#                     )
+#                 return Response(response['AuthenticationResult'], status=status.HTTP_202_ACCEPTED)
+#             except client.exceptions.NoAuthorizedException :
+#                 return Response({
+#                     "message" : "Invalid username or password"
+#                 }, status=status.HTTP_400_BAD_REQUEST)
+#             except Exception as e :
+#                 return Response({
+#                     "message" : str(e)
+#                 }, status=status.HTTP_400_BAD_REQUEST)

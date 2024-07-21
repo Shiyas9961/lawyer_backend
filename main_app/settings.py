@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'projects',
     'tenants',
     'tickets',
-    'users'
+    'users',
+    'corsheaders'
 ]
 
 COGNITO_USER_POOL_ID = os.getenv('COGNITO_USER_POOL_ID')
@@ -61,6 +62,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'main_app.middleware.JsonErrorMiddleware',
+    'corsheaders.middleware.CorsMiddleware'
+]
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',  # React development server URL
 ]
 
 ROOT_URLCONF = 'main_app.urls'
@@ -150,5 +156,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': (
         'rest_framework.parsers.JSONParser',
     ),
-    'EXCEPTION_HANDLER': 'main_app.views.custom_exception_handler',
+    'EXCEPTION_HANDLER': (
+        'main_app.views.custom_exception_handler',
+    )
 }
