@@ -1,8 +1,8 @@
 from django.urls import path
-from .views import *
+from .views import ListUsersByTenant, UserAPIView, UserAPIViewById
 
 urlpatterns = [
-    path('', UserAPIView.as_view()),
-    path('<str:id>/', UserAPIViewById.as_view()),
-    path('t-users/', ListUsersByTenant.as_view())
+    path('user/', UserAPIView.as_view()),
+    path('user/<str:id>/', UserAPIViewById.as_view()),
+    path('t-users/', ListUsersByTenant.as_view()),
 ]

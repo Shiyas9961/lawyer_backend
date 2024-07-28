@@ -8,8 +8,12 @@ from main_app.permissions import IsAdminUser, IsUserUser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.conf  import settings
 from rest_framework import status
+import logging
+
 # Create your views here.
 
+
+logger = logging.getLogger(__name__)
 
 class UserAPIView(APIView) :
 
@@ -117,6 +121,14 @@ class UserAPIViewById (APIView) :
 
             if role in ["admin", "superadmin"] :
                 new_role = request.data.get("role", new_role)
+            
+
+            if new_role and role == "admin" :
+                if new_role == "superadmin" :
+                    return Response({
+                    "message" : "You can't edit role to superadmin"
+                }, status=status.HTTP_401_UNAUTHORIZED)
+                
 
             if not name and not phone_no :
                 return Response({
@@ -195,19 +207,38 @@ class UserAPIViewById (APIView) :
             return Response({
                 "message" : "You have no permission to delete the user"
             }, status=status.HTTP_401_UNAUTHORIZED)
+        
             
-class ListUsersByTenant(APIView) :
+class ListUsersByTenant(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    authentication_classes = [CognitoAuthentication]
 
-    permission_classes = [ IsAuthenticated, IsAdminUser ]
-    authentication_classes = [ CognitoAuthentication ]
+    def get(self, request):
+        logger.info("Entered ListUsersByTenant.get method")
+        try:
+            tenant_id = request.user.tenant
 
-    def get(self, request) :
-        tenant = request.user.tenant
-        users_by_tenant = UserModel.objects.filter(tenant=tenant)
-        serializer = UserModelsSerializer(users_by_tenant, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+            if not tenant_id:
+                return Response(
+                    {'error': 'Tenant ID not found for the user'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
+            users_by_tenant = UserModel.objects.filter(tenant=tenant_id)
+            serializer = UserModelsSerializer(users_by_tenant, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except UserModel.DoesNotExist:
+            return Response(
+                {'error': 'No users found for the given tenant'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     
 # class UserLoginAPIView(APIView) :
