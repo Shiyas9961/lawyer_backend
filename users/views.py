@@ -196,7 +196,7 @@ class UserAPIViewById (APIView) :
                     user.delete()
                     return Response({
                         "message" : f"User deleted successfully"
-                    })
+                    }, )
             except client.exceptions.UserNotFoundException:
                 return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
             except Exception as e :
